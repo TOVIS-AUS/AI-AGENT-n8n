@@ -23,3 +23,22 @@ AND
 
 //Check ASX trading day except Saturday(6) and Sunday(7)
 
+
+If True // meet the conditions
+
+HTTP Request  
+
+ALL.AX
+20-day moving average
+50-day moving average
+200-day moving average
+daily price movement
+volume trend
+
+Parrameters: 
+Method: Get
+https://query1.finance.yahoo.com/v8/finance/chart/ALL.AX?range=1y&interval=1d
+
+Name: User-Agent
+Value: Mozilla/5.0
+
