@@ -1,125 +1,178 @@
 
-## ASX Trading Signal Analysis and Notification System
-
-<img width="1507" height="295" alt="image" src="https://github.com/user-attachments/assets/a71fb7cf-4e16-4224-91db-8e9f2e603787" />
+<img width="1660" height="645" alt="image" src="https://github.com/user-attachments/assets/51d4bdf5-223b-44fe-a070-5036588652ce" />
 
 
+ # ALL.AX AI Signal Notification Workflow
 
-1)Set up Trigger
+This n8n workflow monitors **Aristocrat Leisure Limited (ALL.AX)** using price data, ASX 200 market context, financial news feeds, technical indicators, and AI-assisted analysis.
 
-<img width="259" height="185" alt="image" src="https://github.com/user-attachments/assets/9cd40d6a-e9f6-4b39-a006-727a0c234658" />
+The workflow collects market data, calculates technical indicators, asks OpenAI to analyse the result, and sends a final AI signal report to Gmail.
 
-// Setup a trigger at 09:00 AM Sydney time.
-
-
-<img width="296" height="192" alt="image" src="https://github.com/user-attachments/assets/e6d9d2eb-0c49-47ca-871d-b3c89c67bb28" />
-
-
-Parameters 
-Conditions
-{{ $now.weekday }} # is not equal to 6
-AND
-{{ $now.weekday }} # is not equal to 7 
-
-//Check ASX trading day except Saturday(6) and Sunday(7)
-
-
-If True // meet the conditions
-
- # ALL.AX AI Notification Workflow — Data Collection Nodes
-
-This section explains the function and setup parameters for each data-collection node used in the ALL.AX AI notification workflow.
-
-The workflow collects price data, market context, and financial news before passing the data to the AI analysis layer.
+> This workflow is for research and monitoring only. It does not execute trades and does not provide personalised financial advice.
 
 ---
 
-## Workflow Purpose
-
-This workflow is designed to monitor **Aristocrat Leisure Limited (ALL.AX)** using:
-
-* ALL.AX price history
-* ASX 200 market context
-* ASX-related news
-* Australian financial news
-* Global financial-market news
-
-The collected data is later used to calculate technical indicators, analyse market conditions, and generate AI-assisted notifications.
-
----
-
-## Data Collection Structure
+## Workflow Structure
 
 ```text
 Schedule Trigger
         ↓
 Check ASX Trading Day
         ↓
- ┌─────────────────────────────┬─────────────────────────────┬─────────────────────────────┐
- ↓                             ↓                             ↓
-ASX Chart HTTP Request     ALL.AX HTTP Request        ASX200 Yahoo RSS Read
- ↓                             ↓                             ↓
-Global RSS Read            ASX Investing RSS Read      Other optional news feeds
- └─────────────────────────────┴─────────────────────────────┴─────────────────────────────┘
-                               ↓
-                    Merge and Normalise Data
-                               ↓
-                    Calculate Technical Indicators
-                               ↓
-                         AI Analysis
-                               ↓
-                     Email Notification
+ ┌──────────────────────────────┬──────────────────────────────┬──────────────────────────────┐
+ ↓                              ↓                              ↓
+ASX Chart HTTP Request      ALL.AX HTTP Request         ASX200 Yahoo RSS Read
+ ↓                              ↓                              ↓
+Global RSS Read             ASX Investing RSS Read      Other optional feeds
+ └──────────────────────────────┴──────────────────────────────┴──────────────────────────────┘
+                                ↓
+                            Merge
+                                ↓
+                  Code: Merge and Normalise Data
+                                ↓
+                    Code: Calculate Indicators
+                                ↓
+                    OpenAI: Message a Model
+                                ↓
+                    Code: Parse AI Response
+                                ↓
+                    Gmail: Send a Message
 ```
 
 ---
 
-# 1. ASX Chart HTTP Request
+## Workflow Purpose
+
+The workflow is designed to monitor **ALL.AX** by combining:
+
+* ALL.AX price history
+* ASX 200 market movement
+* Australian financial news
+* Global financial news
+* Technical indicators
+* AI-assisted signal interpretation
+
+The final output is an email report containing:
+
+* Final signal
+* AI signal
+* Confidence score
+* News sentiment
+* Key drivers
+* Risk factors
+* Rationale
+* Disclaimer
+
+---
+
+# 1. Schedule Trigger
+
+## Function
+
+The **Schedule Trigger** starts the workflow automatically.
+
+It is used to run the workflow after the ASX market opens so that the workflow can collect updated market data and news.
+
+## Recommended Parameters
+
+| Parameter | Value                      |
+| --------- | -------------------------- |
+| Node      | Schedule Trigger           |
+| Mode      | Every Day or Every Weekday |
+| Time      | 10:15 AM                   |
+| Timezone  | Australia/Sydney           |
+
+## Recommended Timing
+
+```text
+10:15 AM Australia/Sydney
+```
+
+This gives the ASX market time to open and produce early trading data.
+
+---
+
+# 2. Check ASX Trading Day
+
+## Function
+
+This **IF** node checks whether the workflow is running on a weekday.
+
+It prevents the workflow from running on Saturday or Sunday.
+
+## Node Type
+
+```text
+IF
+```
+
+## Conditions
+
+### Condition 1
+
+| Field    | Value                |
+| -------- | -------------------- |
+| Value 1  | `{{ $now.weekday }}` |
+| Operator | `is not equal to`    |
+| Value 2  | `6`                  |
+
+### Condition 2
+
+| Field    | Value                |
+| -------- | -------------------- |
+| Value 1  | `{{ $now.weekday }}` |
+| Operator | `is not equal to`    |
+| Value 2  | `7`                  |
+
+## Logic
+
+```text
+1 = Monday
+2 = Tuesday
+3 = Wednesday
+4 = Thursday
+5 = Friday
+6 = Saturday
+7 = Sunday
+```
+
+The workflow continues only when:
+
+```text
+weekday is not Saturday
+AND
+weekday is not Sunday
+```
+
+## Note
+
+This only checks weekends.
+
+It does not check ASX public holidays. A more advanced version can add an ASX holiday calendar check.
+
+---
+
+# 3. ASX Chart HTTP Request
+
+## Function
+
+This node fetches historical price data for the **S&P/ASX 200 Index**.
+
+The ASX 200 is used as the broader Australian market benchmark.
+
+It helps compare:
+
+```text
+ALL.AX performance
+vs
+ASX 200 performance
+```
 
 ## Node Type
 
 ```text
 HTTP Request
 ```
-
-## Function
-
-This node fetches historical price data for the **S&P/ASX 200 Index**.
-
-The ASX 200 is used as the broader Australian market benchmark. It helps compare whether ALL.AX is moving because of company-specific factors or because the entire Australian market is moving.
-
-ALL.AX may rise or fall because of:
-
-* company-specific news
-* gaming-sector sentiment
-* general ASX market movement
-* macroeconomic conditions
-* global equity-market direction
-
-By collecting ASX 200 data, the workflow can compare:
-
-```text
-ALL.AX movement
-vs
-ASX 200 movement
-```
-
-Example:
-
-```text
-ALL.AX falls 3%
-ASX 200 falls 2.8%
-```
-
-This may suggest broad market weakness.
-
-But:
-
-```text
-ALL.AX falls 3%
-ASX 200 is flat
-```
-
-This may suggest company-specific weakness.
 
 ## Parameters
 
@@ -136,94 +189,50 @@ This may suggest company-specific weakness.
 ## URL Explanation
 
 ```text
-%5EAXJO
+%5EAXJO = ^AXJO
 ```
 
-is the URL-encoded version of:
-
-```text
-^AXJO
-```
-
-`^AXJO` is the Yahoo Finance ticker for the S&P/ASX 200 Index.
+`^AXJO` is the Yahoo Finance symbol for the S&P/ASX 200 Index.
 
 ## Expected Output
 
-The node returns JSON data containing:
+The node returns:
 
-* timestamp
-* open price
-* high price
-* low price
-* close price
-* volume
-* market metadata
-
-Example structure:
-
-```json
-{
-  "chart": {
-    "result": [
-      {
-        "meta": {
-          "symbol": "^AXJO",
-          "currency": "AUD",
-          "regularMarketPrice": 8500.2
-        },
-        "timestamp": [],
-        "indicators": {
-          "quote": [
-            {
-              "open": [],
-              "high": [],
-              "low": [],
-              "close": [],
-              "volume": []
-            }
-          ]
-        }
-      }
-    ]
-  }
-}
+```text
+chart.result[0].meta
+chart.result[0].timestamp
+chart.result[0].indicators.quote[0].open
+chart.result[0].indicators.quote[0].high
+chart.result[0].indicators.quote[0].low
+chart.result[0].indicators.quote[0].close
+chart.result[0].indicators.quote[0].volume
 ```
 
 ---
 
-# 2. ALL.AX HTTP Request
+# 4. ALL.AX HTTP Request
+
+## Function
+
+This node fetches historical price data for **Aristocrat Leisure Limited (ALL.AX)**.
+
+The data is used to calculate:
+
+* Current price
+* Previous close
+* One-day return
+* Volume ratio
+* 20-day moving average
+* 50-day moving average
+* 200-day moving average
+* RSI 14
+* Technical signal
 
 ## Node Type
 
 ```text
 HTTP Request
 ```
-
-## Function
-
-This node fetches historical price data for **Aristocrat Leisure Limited (ALL.AX)**.
-
-The data is used to calculate technical indicators such as:
-
-* current price
-* 20-day moving average
-* 50-day moving average
-* 200-day moving average
-* daily return
-* volume trend
-* relative performance against the ASX 200
-
-
-This is the core price-data node for the workflow.
-
-The AI analysis should not rely only on news. It should also consider technical and price-based evidence.
-
-This node allows the workflow to check whether ALL.AX is:
-
-* above or below key moving averages
-* trending upward or downward
-* showing unusual volume
-* outperforming or underperforming the broader ASX market
 
 ## Parameters
 
@@ -237,96 +246,40 @@ This node allows the workflow to check whether ALL.AX is:
 | Header Name           | `User-Agent`                                                                                                           |
 | Header Value          | `Mozilla/5.0`                                                                                                          |
 
-## URL Explanation
-
-```text
-ALL.AX
-```
-
-is the Yahoo Finance ticker for Aristocrat Leisure Limited on the Australian Securities Exchange.
-
 ## Expected Output
 
-The node returns historical price and volume data.
+The node returns price and volume history for ALL.AX.
 
-The next Code node can extract:
+Expected ticker inside output:
 
-```javascript
-const result = $json.chart.result[0];
-
-const timestamps = result.timestamp;
-const quote = result.indicators.quote[0];
-
-const closes = quote.close;
-const volumes = quote.volume;
-const currentPrice = result.meta.regularMarketPrice;
-const previousClose = result.meta.previousClose;
+```text
+chart.result[0].meta.symbol = ALL.AX
 ```
-
-## Data Used Later
-
-This node provides the base data for:
-
-* moving average calculation
-* RSI calculation
-* trend classification
-* price-versus-market comparison
-* AI signal generation
 
 ---
 
-# 3. ASX200 Yahoo RSS Read
-
-## Node Type
-
-```text
-RSS Read
-```
+# 5. ASX200 Yahoo RSS Read
 
 ## Function
 
 This node fetches ASX 200-related financial news from Yahoo Finance.
 
-It provides market-level news that may affect Australian equities generally.
+It provides Australian market context.
 
+## Node Type
 
-ALL.AX does not move in isolation. Australian market sentiment can affect most ASX-listed shares.
-
-This node helps the workflow understand the broader Australian market narrative.
-
-Examples of useful news include:
-
-* ASX 200 rises or falls
-* Australian shares react to inflation data
-* RBA expectations affect market sentiment
-* resources or bank shares influence the index
-* global risk sentiment affects the ASX
+```text
+RSS Read
+```
 
 ## Parameters
 
 | Parameter | Value                                                                             |
 | --------- | --------------------------------------------------------------------------------- |
-| Node Type | `RSS Read`                                                                        |
-| URL       | `https://feeds.finance.yahoo.com/rss/2.0/headline?s=%5EAXJO&region=AU&lang=en-AU` |
-| Limit     | Optional, for example `20`                                                        |
-
-## URL Explanation
-
-```text
-%5EAXJO
-```
-
-means:
-
-```text
-^AXJO
-```
-
-This is the Yahoo Finance symbol for the S&P/ASX 200 Index.
+| Feed URL  | `https://feeds.finance.yahoo.com/rss/2.0/headline?s=%5EAXJO&region=AU&lang=en-AU` |
+| Limit     | Optional, for example `10` or `20`                                                |
 
 ## Expected Output Fields
-
-Typical RSS output fields include:
 
 ```text
 title
@@ -338,107 +291,22 @@ guid
 isoDate
 ```
 
-## Example Output
-
-```json
-{
-  "title": "Australian shares rise as investors assess RBA outlook",
-  "link": "https://finance.yahoo.com/...",
-  "pubDate": "2026-06-18T06:32:23.000Z",
-  "contentSnippet": "Australian shares moved higher...",
-  "guid": "article-id"
-}
-```
-
-## Data Used Later
-
-This node provides news context for:
-
-* ASX market sentiment
-* macroeconomic themes
-* RBA-related news
-* broad Australian market direction
-
 ---
 
-# 4. Global RSS Read
-
-## Node Type
-
-```text
-RSS Read
-```
+# 6. Global RSS Read
 
 ## Function
 
 This node fetches global financial-market news.
 
-It helps the workflow understand overseas market conditions that may influence Australian equities.
+It provides international market context, including:
 
-## Why This Node Is Needed
-
-Australian shares are often influenced by global market movements, especially from:
-
-* United States markets
-* European markets
-* global interest-rate expectations
-* oil and commodity prices
-* geopolitical risk
-* technology-sector movement
-* risk-on or risk-off sentiment
-
-For ALL.AX, global context is useful because Aristocrat has significant international exposure, including gaming and digital segments.
-
-## Parameters
-
-| Parameter | Value                                    |
-| --------- | ---------------------------------------- |
-| Node Type | `RSS Read`                               |
-| URL       | `https://www.investing.com/rss/news.rss` |
-| Limit     | Optional, for example `20`               |
-
-## Expected Output Fields
-
-Typical RSS output fields include:
-
-```text
-title
-link
-pubDate
-creator
-content
-contentSnippet
-guid
-isoDate
-```
-
-## Example Output
-
-```json
-{
-  "title": "Global stocks ease as investors assess Fed rate outlook",
-  "link": "https://www.investing.com/...",
-  "pubDate": "2026-06-18T05:25:32.000Z",
-  "creator": "Reuters",
-  "contentSnippet": "Global stocks moved lower...",
-  "guid": "article-id"
-}
-```
-
-## Data Used Later
-
-This node provides global context for:
-
-* Federal Reserve policy
 * US market movement
-* global equity sentiment
-* commodity prices
-* risk sentiment
-* macroeconomic conditions
-
----
-
-# 5. ASX Investing RSS Read
+* Federal Reserve news
+* Inflation
+* Commodities
+* Global equity sentiment
+* Risk-on or risk-off market conditions
 
 ## Node Type
 
@@ -446,37 +314,14 @@ This node provides global context for:
 RSS Read
 ```
 
-## Function
-
-This node fetches Australian financial-market news from Investing.com Australia.
-
-It complements the Yahoo ASX 200 RSS feed by adding another Australian market-news source.
-
-
-Using more than one news source reduces the risk of missing important market stories.
-
-This node may capture Australian market stories not included in the Yahoo Finance ASX 200 feed.
-
-Examples of relevant topics include:
-
-* Australian equities
-* ASX market movement
-* RBA commentary
-* company earnings
-* macroeconomic indicators
-* commodity and currency impact on Australian shares
-
 ## Parameters
 
-| Parameter | Value                                   |
-| --------- | --------------------------------------- |
-| Node Type | `RSS Read`                              |
-| URL       | `https://au.investing.com/rss/news.rss` |
-| Limit     | Optional, for example `20`              |
+| Parameter | Value                                    |
+| --------- | ---------------------------------------- |
+| Feed URL  | `https://www.investing.com/rss/news.rss` |
+| Limit     | Optional, for example `10` or `20`       |
 
 ## Expected Output Fields
-
-Typical RSS output fields include:
 
 ```text
 title
@@ -489,130 +334,762 @@ guid
 isoDate
 ```
 
-## Example Output
+---
+
+# 7. ASX Investing RSS Read
+
+## Function
+
+This node fetches Australian financial-market news from Investing.com Australia.
+
+It complements Yahoo Finance by adding another Australian market-news source.
+
+## Node Type
+
+```text
+RSS Read
+```
+
+## Parameters
+
+| Parameter | Value                                   |
+| --------- | --------------------------------------- |
+| Feed URL  | `https://au.investing.com/rss/news.rss` |
+| Limit     | Optional, for example `10` or `20`      |
+
+## Expected Output Fields
+
+```text
+title
+link
+pubDate
+creator
+content
+contentSnippet
+guid
+isoDate
+```
+
+---
+
+# 8. Merge
+
+## Function
+
+The **Merge** node combines the five data sources into one stream.
+
+It combines:
+
+* ASX 200 price data
+* ALL.AX price data
+* Yahoo ASX 200 news
+* Global financial news
+* Australian investing news
+
+## Node Type
+
+```text
+Merge
+```
+
+## Parameters
+
+| Parameter | Value    |
+| --------- | -------- |
+| Mode      | `Append` |
+
+## Expected Output
+
+Example:
+
+```text
+ASX Chart HTTP Request: 1 item
+ALL.AX HTTP Request: 1 item
+ASX200 Yahoo RSS Read: 10 items
+Global RSS Read: 10 items
+ASX Investing RSS Read: 10 items
+
+Total after Merge: 32 items
+```
+
+---
+
+# 9. Code Node — Merge and Normalise Data
+
+## Function
+
+This Code node separates price-chart data from RSS news data and creates one clean JSON object.
+
+It identifies:
+
+* ALL.AX chart data
+* ASX 200 chart data
+* RSS news articles
+
+## Node Type
+
+```text
+Code
+```
+
+## Parameters
+
+| Parameter | Value                    |
+| --------- | ------------------------ |
+| Mode      | `Run Once for All Items` |
+| Language  | `JavaScript`             |
+
+## Code
+
+```javascript
+const items = $input.all();
+
+let allChart = null;
+let asxChart = null;
+const news = [];
+
+for (const item of items) {
+  const json = item.json;
+
+  // Detect Yahoo Finance chart response
+  if (json.chart?.result?.[0]) {
+    const result = json.chart.result[0];
+    const symbol = result.meta?.symbol;
+
+    if (symbol === "ALL.AX") {
+      allChart = result;
+    }
+
+    if (symbol === "^AXJO") {
+      asxChart = result;
+    }
+
+    continue;
+  }
+
+  // Detect RSS news item
+  if (json.title || json.link || json.pubDate || json.isoDate) {
+    news.push({
+      title: json.title || "",
+      link: json.link || "",
+      pubDate: json.pubDate || json.isoDate || "",
+      description:
+        json.contentSnippet ||
+        json.content ||
+        json.description ||
+        "",
+      source:
+        json.creator ||
+        json.author ||
+        json.source ||
+        "RSS Feed",
+      guid:
+        json.guid ||
+        json.link ||
+        json.title ||
+        ""
+    });
+  }
+}
+
+if (!allChart) {
+  throw new Error("ALL.AX chart data was not found.");
+}
+
+if (!asxChart) {
+  throw new Error("ASX 200 chart data was not found.");
+}
+
+return [
+  {
+    json: {
+      symbol: "ALL.AX",
+      analysisTime: new Date().toISOString(),
+      allChart,
+      asxChart,
+      news,
+      newsCount: news.length
+    }
+  }
+];
+```
+
+## Expected Output
 
 ```json
 {
-  "title": "Australian shares fall as investors digest hawkish Fed comments",
-  "link": "https://au.investing.com/...",
-  "pubDate": "2026-06-18T05:25:32.000Z",
-  "creator": "Reuters",
-  "contentSnippet": "Australian shares declined...",
-  "guid": "article-id"
+  "symbol": "ALL.AX",
+  "analysisTime": "2026-07-02T06:37:56.901Z",
+  "allChart": {},
+  "asxChart": {},
+  "news": [],
+  "newsCount": 30
 }
 ```
 
-## Data Used Later
-
-This node supports:
-
-* Australian market analysis
-* ASX-related filtering
-* macroeconomic news detection
-* AI market interpretation
-
 ---
 
-# Data Collection Layer Summary
+# 10. Code Node — Calculate Indicators
 
-The five nodes collect two main types of data.
+## Function
 
-## Market Price Data
+This node calculates technical indicators and market context.
 
-| Node                   | Data Collected                   |
-| ---------------------- | -------------------------------- |
-| ASX Chart HTTP Request | ASX 200 price history            |
-| ALL.AX HTTP Request    | Aristocrat Leisure price history |
+It calculates:
 
-## Market News Data
+* Current price
+* Previous close
+* One-day return
+* ASX 200 one-day return
+* Relative performance vs ASX 200
+* SMA20
+* SMA50
+* SMA200
+* RSI14
+* Volume ratio
+* Technical score
+* Technical signal
 
-| Node                   | Data Collected                     |
-| ---------------------- | ---------------------------------- |
-| ASX200 Yahoo RSS Read  | ASX 200 and Australian market news |
-| Global RSS Read        | Global financial-market news       |
-| ASX Investing RSS Read | Australian financial-market news   |
-
----
-
-# Parameter Summary Table
-
-| Node                   | Type         | Method | URL                                                                                                                     | Authentication | Header                    |
-| ---------------------- | ------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------- |
-| ASX Chart HTTP Request | HTTP Request | GET    | `https://query1.finance.yahoo.com/v8/finance/chart/%5EAXJO?range=1y&interval=1d&includePrePost=false&events=div,splits` | None           | `User-Agent: Mozilla/5.0` |
-| ALL.AX HTTP Request    | HTTP Request | GET    | `https://query1.finance.yahoo.com/v8/finance/chart/ALL.AX?range=1y&interval=1d&includePrePost=false&events=div,splits`  | None           | `User-Agent: Mozilla/5.0` |
-| ASX200 Yahoo RSS Read  | RSS Read     | N/A    | `https://feeds.finance.yahoo.com/rss/2.0/headline?s=%5EAXJO&region=AU&lang=en-AU`                                       | None           | N/A                       |
-| Global RSS Read        | RSS Read     | N/A    | `https://www.investing.com/rss/news.rss`                                                                                | None           | N/A                       |
-| ASX Investing RSS Read | RSS Read     | N/A    | `https://au.investing.com/rss/news.rss`                                                                                 | None           | N/A                       |
-
----
-
-# Notes
-
-## Why Use HTTP Request for Price Data?
-
-HTTP Request nodes are used because price-history data is returned as structured JSON.
-
-This format is suitable for calculating:
-
-* moving averages
-* price returns
-* volume ratios
-* technical signals
-* relative performance
-
-## Why Use RSS Read for News?
-
-RSS Read nodes are used because financial news is naturally distributed as feed items.
-
-This format is suitable for collecting:
-
-* headlines
-* article links
-* publication dates
-* article summaries
-* source information
-
-## Why Separate Price Data and News Data?
-
-Price data and news data have different structures.
-
-Price data is numerical and time-series based.
-
-News data is text-based and event-driven.
-
-The workflow collects them separately first, then merges and normalises them later for AI interpretation.
-
----
-
-# Next Step After Data Collection
-
-After these data-collection nodes, the next recommended node is:
+## Node Type
 
 ```text
-Code Node — Merge and Normalise Data
+Code
 ```
 
-This node combines:
+## Parameters
 
-* ALL.AX price data
-* ASX 200 price data
-* ASX-related news
-* global market news
-* Australian financial news
+| Parameter | Value                    |
+| --------- | ------------------------ |
+| Mode      | `Run Once for All Items` |
+| Language  | `JavaScript`             |
 
-into one clean JSON object.
+## Code
 
-The cleaned object can then be passed to:
+```javascript
+const item = $input.first().json;
+
+const allChart = item.allChart;
+const asxChart = item.asxChart;
+
+function extractSeries(chart) {
+  const timestamps = chart.timestamp || [];
+  const quote = chart.indicators?.quote?.[0] || {};
+
+  const closes = quote.close || [];
+  const volumes = quote.volume || [];
+
+  return timestamps
+    .map((ts, i) => ({
+      date: new Date(ts * 1000).toISOString().slice(0, 10),
+      close: closes[i],
+      volume: volumes[i],
+    }))
+    .filter(row => row.close !== null && row.close !== undefined);
+}
+
+function sma(values, period) {
+  if (values.length < period) return null;
+
+  const slice = values.slice(-period);
+  const sum = slice.reduce((acc, value) => acc + value, 0);
+
+  return Number((sum / period).toFixed(4));
+}
+
+function rsi(values, period = 14) {
+  if (values.length <= period) return null;
+
+  const recent = values.slice(-(period + 1));
+
+  let gains = 0;
+  let losses = 0;
+
+  for (let i = 1; i < recent.length; i++) {
+    const change = recent[i] - recent[i - 1];
+
+    if (change > 0) {
+      gains += change;
+    } else {
+      losses += Math.abs(change);
+    }
+  }
+
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+
+  if (avgLoss === 0) return 100;
+
+  const rs = avgGain / avgLoss;
+  return Number((100 - 100 / (1 + rs)).toFixed(2));
+}
+
+function percentChange(current, previous) {
+  if (!current || !previous) return null;
+
+  return Number((((current - previous) / previous) * 100).toFixed(2));
+}
+
+const allSeries = extractSeries(allChart);
+const asxSeries = extractSeries(asxChart);
+
+const allCloses = allSeries.map(row => row.close);
+
+const allLatestRow = allSeries.at(-1);
+const allPreviousRow = allSeries.at(-2);
+
+const asxLatestRow = asxSeries.at(-1);
+const asxPreviousRow = asxSeries.at(-2);
+
+const currentPrice =
+  allLatestRow?.close ??
+  allChart.meta?.regularMarketPrice ??
+  null;
+
+const previousClose =
+  allPreviousRow?.close ??
+  allChart.meta?.previousClose ??
+  null;
+
+const asxCurrent =
+  asxLatestRow?.close ??
+  asxChart.meta?.regularMarketPrice ??
+  null;
+
+const asxPreviousClose =
+  asxPreviousRow?.close ??
+  asxChart.meta?.previousClose ??
+  null;
+
+const sma20 = sma(allCloses, 20);
+const sma50 = sma(allCloses, 50);
+const sma200 = sma(allCloses, 200);
+const rsi14 = rsi(allCloses, 14);
+
+const allReturn1d = percentChange(currentPrice, previousClose);
+const asxReturn1d = percentChange(asxCurrent, asxPreviousClose);
+
+const relativePerformance1d =
+  allReturn1d !== null && asxReturn1d !== null
+    ? Number((allReturn1d - asxReturn1d).toFixed(2))
+    : null;
+
+const volumes = allSeries
+  .map(row => row.volume)
+  .filter(v => v !== null && v !== undefined);
+
+const latestVolume = allLatestRow?.volume ?? null;
+
+const avgVolume20 =
+  volumes.length >= 20
+    ? Number((volumes.slice(-20).reduce((a, b) => a + b, 0) / 20).toFixed(0))
+    : null;
+
+const volumeRatio =
+  latestVolume && avgVolume20
+    ? Number((latestVolume / avgVolume20).toFixed(2))
+    : null;
+
+let technicalScore = 0;
+
+if (currentPrice && sma50 && currentPrice > sma50) technicalScore += 1;
+if (currentPrice && sma200 && currentPrice > sma200) technicalScore += 1;
+if (sma50 && sma200 && sma50 > sma200) technicalScore += 2;
+
+if (rsi14 !== null && rsi14 >= 50 && rsi14 <= 70) technicalScore += 1;
+if (rsi14 !== null && rsi14 > 75) technicalScore -= 1;
+
+if (volumeRatio !== null && volumeRatio > 1.3) technicalScore += 1;
+
+if (relativePerformance1d !== null && relativePerformance1d > 1) {
+  technicalScore += 1;
+}
+
+if (relativePerformance1d !== null && relativePerformance1d < -1) {
+  technicalScore -= 1;
+}
+
+let technicalSignal = "HOLD";
+
+if (technicalScore >= 4) {
+  technicalSignal = "BUY";
+} else if (technicalScore <= -3) {
+  technicalSignal = "SELL";
+}
+
+return [
+  {
+    json: {
+      symbol: item.symbol,
+      analysisTime: item.analysisTime,
+
+      price: {
+        currentPrice,
+        previousClose,
+        oneDayReturnPercent: allReturn1d,
+        latestVolume,
+        averageVolume20: avgVolume20,
+        volumeRatio,
+      },
+
+      marketContext: {
+        asxCurrent,
+        asxPreviousClose,
+        asxOneDayReturnPercent: asxReturn1d,
+        relativePerformance1d,
+      },
+
+      indicators: {
+        sma20,
+        sma50,
+        sma200,
+        rsi14,
+      },
+
+      technicalSignal,
+      technicalScore,
+
+      news: item.news,
+      newsCount: item.newsCount,
+    },
+  },
+];
+```
+
+## Expected Output
+
+```json
+{
+  "symbol": "ALL.AX",
+  "price": {
+    "currentPrice": 61.53,
+    "previousClose": 59.98,
+    "oneDayReturnPercent": 2.58,
+    "volumeRatio": 0.99
+  },
+  "marketContext": {
+    "asxOneDayReturnPercent": 0.02,
+    "relativePerformance1d": 2.56
+  },
+  "indicators": {
+    "sma20": 55.736,
+    "sma50": 51.7488,
+    "sma200": 55.0886,
+    "rsi14": 74.49
+  },
+  "technicalSignal": "HOLD",
+  "technicalScore": 3
+}
+```
+
+---
+
+# 11. OpenAI — Message a Model
+
+## Function
+
+This node sends the calculated indicators and news data to OpenAI.
+
+The AI analyses the data and returns a structured signal response.
+
+## Node Type
 
 ```text
-Code Node — Calculate Technical Indicators
+OpenAI
 ```
 
-and then to:
+## Parameters
+
+| Parameter  | Value                                                       |
+| ---------- | ----------------------------------------------------------- |
+| Resource   | `Text`                                                      |
+| Operation  | `Message a Model`                                           |
+| Credential | `n8n free OpenAI API credits` or your OpenAI API credential |
+| Model      | `gpt-5-mini` or supported mini model                        |
+| Role       | `User`                                                      |
+| Tools      | Leave empty                                                 |
+
+## Prompt
+
+Use **Expression mode** and paste:
+
+```javascript
+{{ `
+You are a cautious financial-market analyst.
+
+Analyse the following ALL.AX data and return a structured JSON response only.
+
+Do not provide personal financial advice.
+Do not invent facts.
+Use only the supplied data.
+
+Return JSON in this exact structure:
+
+{
+  "aiSignal": "BUY" | "HOLD" | "SELL",
+  "confidence": 0-100,
+  "newsSentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",
+  "keyDrivers": ["driver 1", "driver 2"],
+  "riskFactors": ["risk 1", "risk 2"],
+  "rationale": "short explanation"
+}
+
+Decision rules:
+- Prefer HOLD if evidence is mixed.
+- BUY requires positive technical evidence and no serious negative news.
+- SELL requires clear technical weakness or serious negative news.
+- Confidence above 70 should only be used when evidence is strong.
+
+Input data:
+
+${JSON.stringify($json)}
+` }}
+```
+
+## Expected Output
+
+The OpenAI node returns text containing JSON, for example:
+
+```json
+{
+  "aiSignal": "HOLD",
+  "confidence": 60,
+  "newsSentiment": "NEUTRAL",
+  "keyDrivers": [
+    "Price is above key moving averages",
+    "One-day return is stronger than ASX 200"
+  ],
+  "riskFactors": [
+    "RSI is near overbought territory",
+    "Volume confirmation is limited"
+  ],
+  "rationale": "The technical setup is positive, but confidence is limited due to overbought RSI and mixed news."
+}
+```
+
+---
+
+# 12. Code Node — Parse AI Response
+
+## Function
+
+This node parses the AI response and prepares an email-friendly HTML report.
+
+It extracts:
+
+* AI signal
+* Confidence
+* News sentiment
+* Key drivers
+* Risk factors
+* Rationale
+* Final signal
+* Email body
+
+## Node Type
 
 ```text
-OpenAI — AI Analysis
+Code
 ```
+
+## Parameters
+
+| Parameter | Value                    |
+| --------- | ------------------------ |
+| Mode      | `Run Once for All Items` |
+| Language  | `JavaScript`             |
+
+## Code
+
+```javascript
+const item = $input.first().json;
+
+// If parsed fields already exist, use them.
+// If not, try to parse directly from OpenAI output.
+let aiData = item.rawAiResponse;
+
+if (!aiData) {
+  const rawText = item.output?.[0]?.content?.[0]?.text;
+
+  if (!rawText) {
+    throw new Error("AI response text was not found.");
+  }
+
+  try {
+    aiData = JSON.parse(rawText);
+  } catch (error) {
+    throw new Error("AI response was not valid JSON: " + rawText);
+  }
+}
+
+const aiSignal = aiData.aiSignal || "UNKNOWN";
+const confidence = aiData.confidence ?? "N/A";
+const newsSentiment = aiData.newsSentiment || "N/A";
+const keyDrivers = aiData.keyDrivers || [];
+const riskFactors = aiData.riskFactors || [];
+const rationale = aiData.rationale || "No rationale provided.";
+
+let finalSignal = "HOLD";
+
+if (aiSignal === "BUY" && confidence >= 70) {
+  finalSignal = "BUY";
+}
+
+if (aiSignal === "SELL" && confidence >= 70) {
+  finalSignal = "SELL";
+}
+
+const decisionReason =
+  finalSignal === "HOLD"
+    ? "Final signal is HOLD because the AI signal is HOLD or confidence is below 70."
+    : `Final signal is ${finalSignal} because the AI signal is ${aiSignal} with confidence ${confidence}%.`;
+
+function makeList(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return "<li>No data provided.</li>";
+  }
+
+  return items.map(item => `<li>${item}</li>`).join("");
+}
+
+const emailBody = `
+<h2>ALL.AX AI Signal Report</h2>
+
+<h3>Final Signal</h3>
+<p><strong style="font-size: 20px;">${finalSignal}</strong></p>
+
+<h3>Summary</h3>
+<ul>
+  <li><strong>AI Signal:</strong> ${aiSignal}</li>
+  <li><strong>Confidence:</strong> ${confidence}%</li>
+  <li><strong>News Sentiment:</strong> ${newsSentiment}</li>
+</ul>
+
+<h3>Decision Reason</h3>
+<p>${decisionReason}</p>
+
+<h3>Key Drivers</h3>
+<ul>
+  ${makeList(keyDrivers)}
+</ul>
+
+<h3>Risk Factors</h3>
+<ul>
+  ${makeList(riskFactors)}
+</ul>
+
+<h3>Rationale</h3>
+<p>${rationale}</p>
+
+<hr>
+
+<p><em>
+This is an automated research signal generated from market data and AI-assisted analysis.
+It is not personalised financial advice. No trade has been executed.
+</em></p>
+`;
+
+return [
+  {
+    json: {
+      finalSignal,
+      aiSignal,
+      confidence,
+      newsSentiment,
+      keyDrivers,
+      riskFactors,
+      rationale,
+      decisionReason,
+      rawAiResponse: aiData,
+      emailBody
+    }
+  }
+];
+```
+
+## Expected Output
+
+```json
+{
+  "finalSignal": "HOLD",
+  "aiSignal": "HOLD",
+  "confidence": 60,
+  "newsSentiment": "NEUTRAL",
+  "keyDrivers": [],
+  "riskFactors": [],
+  "rationale": "",
+  "emailBody": "<h2>ALL.AX AI Signal Report</h2>..."
+}
+```
+
+---
+
+# 13. Gmail — Send a Message
+
+## Function
+
+This node sends the final AI signal report by email.
+
+## Node Type
+
+```text
+Gmail
+```
+
+## Parameters
+
+| Parameter  | Value                    |
+| ---------- | ------------------------ |
+| Credential | `Gmail OAuth2 API`       |
+| Resource   | `Message`                |
+| Operation  | `Send`                   |
+| To         | `your-email@example.com` |
+| Email Type | `HTML`                   |
+
+## Subject
+
+```javascript
+ALL.AX AI Signal - {{ $json.finalSignal }} - {{ $now.setZone("Australia/Sydney").toFormat("dd LLL yyyy") }}
+```
+
+## Message
+
+```javascript
+{{ $json.emailBody }}
+```
+
+## Expected Email Output
+
+The email includes:
+
+* Final signal
+* AI signal
+* Confidence score
+* News sentiment
+* Decision reason
+* Key drivers
+* Risk factors
+* Rationale
+* Disclaimer
+
+---
+
+# Final Workflow Summary
+
+| Step | Node                     | Purpose                                |
+| ---- | ------------------------ | -------------------------------------- |
+| 1    | Schedule Trigger         | Runs the workflow automatically        |
+| 2    | IF                       | Checks weekday trading condition       |
+| 3    | ASX Chart HTTP Request   | Fetches ASX 200 price data             |
+| 4    | ALL.AX HTTP Request      | Fetches ALL.AX price data              |
+| 5    | ASX200 Yahoo RSS Read    | Fetches ASX-related news               |
+| 6    | Global RSS Read          | Fetches global financial news          |
+| 7    | ASX Investing RSS Read   | Fetches Australian financial news      |
+| 8    | Merge                    | Combines all raw data                  |
+| 9    | Merge and Normalise Data | Creates one clean data object          |
+| 10   | Calculate Indicators     | Calculates technical indicators        |
+| 11   | OpenAI Message a Model   | Generates AI signal analysis           |
+| 12   | Parse AI Response        | Parses AI output and builds email body |
+| 13   | Gmail Send Message       | Sends final email report               |
 
 ---
 
