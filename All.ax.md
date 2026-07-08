@@ -1,5 +1,6 @@
 
-<img width="1660" height="645" alt="image" src="https://github.com/user-attachments/assets/51d4bdf5-223b-44fe-a070-5036588652ce" />
+
+<img width="1495" height="764" alt="All" src="https://github.com/user-attachments/assets/43f8b79f-fb28-446c-ba1a-1d3a785a0e54" />
 
 
  # ALL.AX AI Signal Notification Workflow
